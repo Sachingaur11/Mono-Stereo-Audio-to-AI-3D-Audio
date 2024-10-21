@@ -1,9 +1,9 @@
 flask
 pydub
-numpy
+numpy==1.21.6
 requests
 pymongo
-scipy
+scipy==1.7.3
 soundfile
 time
 wrek
