@@ -6,4 +6,4 @@ services:
     buildCommand: 
       - pip install -r requirements.txt
     startCommand: python app.py
-    pythonVersion: 3.10.12  # Specify Python 3.10 version
+    pythonVersion: 3.9.20  # Specify Python 3.10 version
