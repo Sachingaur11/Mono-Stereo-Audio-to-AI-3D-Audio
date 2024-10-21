@@ -79,11 +79,11 @@ if __name__ == "__main__":
     print(f"[INFO] BGM ID: {bgm_id}")
 
     # Fetch files from MongoDB
-    fileId1 = ObjectId(sfx_id)
-    fileId2 = ObjectId(vo_id)
+    # fileId1 = ObjectId(sfx_id)
+    # fileId2 = ObjectId(vo_id)
     fileId3 = ObjectId(bgm_id)
-    sfx_file = get_file_from_mongo(fileId1, "sfx_input.mp3", 'input_SFX_files')
-    vo_file = get_file_from_mongo(fileId2, "vo_input.mp3", 'input_VO_files')
+    # sfx_file = get_file_from_mongo(fileId1, "sfx_input.mp3", 'input_SFX_files')
+    # vo_file = get_file_from_mongo(fileId2, "vo_input.mp3", 'input_VO_files')
     bgm_file = get_file_from_mongo(fileId3, "bgm_input.mp3", 'input_BGM_files')
 
     # Run processing script for SFX and wait for it to complete
