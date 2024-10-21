@@ -4,3 +4,6 @@ numpy
 requests
 pymongo
 scipy
+soundfile
+time
+wrek

@@ -2,39 +2,26 @@ import os
 import subprocess
 import sys
 
-# Define the required packages
-required_packages = [
-    "pydub",
-    "pymongo",
-    "gridfs",
-    "soundfile",
-    "numpy",
-    "requests",
-    "scipy",
-    "flask",
-    "werkzeug"
-]
 
-# Step 1: Create a virtual environment
-def create_virtual_env(env_name="venv"):
+
+# Step 1: Create and activate a virtual environment
+def create_and_activate_virtual_env(env_name="venv"):
     print("Creating virtual environment...")
     subprocess.run([sys.executable, "-m", "venv", env_name])
-
-# Step 2: Install the required packages
-def install_packages(env_name="venv"):
-    print("Installing packages...")
-    # Activate virtual environment and install packages
-    if os.name == 'nt':  # Windows
-        pip_path = os.path.join(env_name, "Scripts", "pip")
-    else:  # macOS/Linux
-        pip_path = os.path.join(env_name, "bin", "pip")
     
-    subprocess.run([pip_path, "install", "--upgrade", "pip"])  # Upgrade pip
-    subprocess.run([pip_path, "install"] + required_packages)
+    print("Activating virtual environment...")
+    if os.name == 'nt':  # Windows
+        activate_script = os.path.join(env_name, "Scripts", "activate")
+    else:  # macOS/Linux
+        activate_script = os.path.join(env_name, "bin", "activate")
+    
+    activate_command = f"source {activate_script}" if os.name != 'nt' else activate_script
+    subprocess.run(activate_command, shell=True, executable="/bin/bash" if os.name != 'nt' else None)
+
+
 
 # Main function
 if __name__ == "__main__":
     env_name = "venv"
-    create_virtual_env(env_name)
-    install_packages(env_name)
-    print(f"Virtual environment '{env_name}' created and packages installed.")
+    create_and_activate_virtual_env(env_name)
+    print(f"Virtual environment '{env_name}' created, activated, and packages installed.")
