@@ -3,9 +3,9 @@ import subprocess
 import sys
 
 # Step 1: Create and activate a virtual environment
-def create_and_activate_virtual_env(env_name="venv", python_version="python3.9"):
+def create_and_activate_virtual_env(env_name="venv"):
     print("Creating virtual environment...")
-    subprocess.run([python_version, "-m", "venv", env_name])
+    subprocess.run([sys.executable, "-m", "venv", env_name])
     
     print("Activating virtual environment...")
     if os.name == 'nt':  # Windows
