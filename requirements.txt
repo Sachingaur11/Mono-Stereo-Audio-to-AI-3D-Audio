@@ -3,7 +3,7 @@ pydub==0.25.1
 numpy==1.26.4
 requests==2.32.3
 pymongo==4.10.1
-scipy==1.14.1
+scipy==1.13.1
 soundfile==0.12.1
 werkzeug==3.0.4
 gunicorn==21.2.0
