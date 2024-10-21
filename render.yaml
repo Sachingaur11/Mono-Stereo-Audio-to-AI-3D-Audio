@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: my-python-service
+    env: python
+    region: oregon  # Replace with your desired region
+    buildCommand: 
+      - pip install -r requirements.txt
+    startCommand: python app.py
+    pythonVersion: 3.9.10  # Specify the exact Python version
