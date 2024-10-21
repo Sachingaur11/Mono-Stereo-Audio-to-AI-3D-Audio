@@ -123,3 +123,4 @@ if __name__ == "__main__":
 
     # Clean up temporary files
     cleanup_files( bgm_file, processed_sfx_file, processed_vo_file, output_file)
+
