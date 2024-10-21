@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Processing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Upload Audio Files</h1>
+    <form id="uploadForm" action="/" method="post" enctype="multipart/form-data">
+        <label for="vo_file">Voice Over (VO):</label>
+        <input type="file" name="vo_file" accept=".mp3,.wav" required><br><br>
+        <label for="sfx_file">Sound Effects (SFX):</label>
+        <input type="file" name="sfx_file" accept=".mp3,.wav" required><br><br>
+        <label for="bgm_file">Background Music (BGM):</label>
+        <input type="file" name="bgm_file" accept=".mp3,.wav" required><br><br>
+        <button type="submit">Process</button>
+    </form>
+    <div id="progress" style="display:none;">Processing...</div>
+    <div id="download" style="display:none;">
+        <a id="downloadLink" href="#" download>Download Processed File</a>
+    </div>
+    <script>
+        document.getElementById('uploadForm').onsubmit = function(event) {
+            event.preventDefault(); // Prevent default form submission
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('download').style.display = 'none';
+
+            var formData = new FormData(this);
+
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.style.display = 'block';
+                document.getElementById('progress').style.display = 'none';
+                document.getElementById('download').style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('progress').style.display = 'none';
+            });
+        };
+    </script>
+</body>
+</html>
