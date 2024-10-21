@@ -122,4 +122,4 @@ if __name__ == "__main__":
     print(f"[INFO] Process completed successfully! Final output file: {output_file}")
 
     # Clean up temporary files
-    cleanup_files(sfx_file, vo_file, bgm_file, processed_sfx_file, processed_vo_file, output_file)
+    cleanup_files( bgm_file, processed_sfx_file, processed_vo_file, output_file)
