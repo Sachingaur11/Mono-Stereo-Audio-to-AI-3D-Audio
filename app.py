@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, jsonify
 import os
 from werkzeug.utils import secure_filename
 import subprocess
@@ -56,8 +56,8 @@ def index():
             with open(output_path, "wb") as f:
                 f.write(final_file['data'])
 
-            # Ensure the file is sent as an attachment
-            return send_file(output_path, as_attachment=True, download_name=final_file['filename'])
+            # Return the file name to the client
+            return jsonify({'filename': final_file['filename']})
 
     return render_template('index.html')
 

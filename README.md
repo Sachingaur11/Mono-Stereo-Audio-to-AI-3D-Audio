@@ -86,5 +86,3 @@ This project is ideal for developers and audio engineers looking to explore the 
     │ └── index.html
     ├── requirements.txt
     └── venv/
-
-
