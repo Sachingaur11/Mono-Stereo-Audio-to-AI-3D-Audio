@@ -3,29 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Processing</title>
+    <title>Audio Processing Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Upload Audio Files</h1>
-    <form id="uploadForm" action="/" method="post" enctype="multipart/form-data">
-        <label for="vo_file">Voice Over (VO):</label>
-        <input type="file" name="vo_file" accept=".mp3,.wav" required><br><br>
-        <label for="sfx_file">Sound Effects (SFX):</label>
-        <input type="file" name="sfx_file" accept=".mp3,.wav" required><br><br>
-        <label for="bgm_file">Background Music (BGM):</label>
-        <input type="file" name="bgm_file" accept=".mp3,.wav" required><br><br>
-        <button type="submit">Process</button>
-    </form>
-    <div id="progress" style="display:none;">Processing...</div>
-    <div id="download" style="display:none;">
-        <a id="downloadLink" href="#" download>Download Processed File</a>
-    </div>
+    <header>
+        <h1>Audio Processing Platform</h1>
+        <p>Upload your audio files and experience the magic of 3D sound processing.</p>
+    </header>
+    <main>
+        <form id="uploadForm" action="/" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="vo_file">Voice Over (VO):</label>
+                <p class="description">Upload the main voice track for your project.</p>
+                <input type="file" name="vo_file" accept=".mp3,.wav" required>
+            </div>
+            <div class="form-group">
+                <label for="sfx_file">Sound Effects (SFX):</label>
+                <p class="description">Add sound effects to enhance your audio experience.</p>
+                <input type="file" name="sfx_file" accept=".mp3,.wav" required>
+            </div>
+            <div class="form-group">
+                <label for="bgm_file">Background Music (BGM):</label>
+                <p class="description">Include background music to set the mood.</p>
+                <input type="file" name="bgm_file" accept=".mp3,.wav" required>
+            </div>
+            <button type="submit">Process</button>
+        </form>
+        <div id="progress" style="display:none;">Processing...</div>
+        <div id="download">
+            <button id="downloadButton" disabled>Download Processed File</button>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 Audio Processing Platform. All rights reserved.</p>
+    </footer>
     <script>
         document.getElementById('uploadForm').onsubmit = function(event) {
             event.preventDefault(); // Prevent default form submission
             document.getElementById('progress').style.display = 'block';
-            document.getElementById('download').style.display = 'none';
+            document.getElementById('downloadButton').disabled = true;
 
             var formData = new FormData(this);
 
@@ -33,14 +51,24 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const downloadLink = document.getElementById('downloadLink');
-                downloadLink.href = url;
-                downloadLink.style.display = 'block';
+            .then(response => response.json())
+            .then(data => {
+                const downloadButton = document.getElementById('downloadButton');
+                downloadButton.onclick = function() {
+                    fetch(`/download/${data.filename}`)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = data.filename; // Use the filename from the server
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    });
+                };
+                downloadButton.disabled = false;
                 document.getElementById('progress').style.display = 'none';
-                document.getElementById('download').style.display = 'block';
             })
             .catch(error => {
                 console.error('Error:', error);
