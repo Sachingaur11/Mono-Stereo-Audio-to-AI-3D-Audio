@@ -13,6 +13,7 @@ import time
 from scipy.io import wavfile
 from scipy.signal import spectrogram
 from bson import ObjectId
+import librosa
 
 AUDIO_FORMATS = {'.mp3', '.mp4', '.wav'}
 SPEED_OF_SOUND = 343  
@@ -21,99 +22,77 @@ ATTENUATION_MIN = 0.15
 ATTENUATION_MAX = 0.7
 ATTENUATION_DISTANCE_FACTOR = 4
 
-# Your OpenAI API key
 api_key = "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"
 
-# Encode the username and password
 username = quote_plus("sachingaur")
 password = quote_plus("Sachin@1234")
 
-# Use the encoded username and password in the connection string
 client = MongoClient(f"mongodb+srv://{username}:{password}@cluster0.9xtyu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&ssl=true")
 db = client['audio_database']
 fs = GridFS(db)
 input_collection = db['input_SFX_files.files']
 output_collection = db['output_SFX_files']
 
-# Convert audio channels to stereo if necessary
 def convert_audio_channels(input_file, output_file, target_channels=2):
-    print("[INFO] Checking audio channels...")
     audio = AudioSegment.from_file(input_file)
     
     if audio.channels != target_channels:
-        print(f"[INFO] Converting audio to {target_channels}-channel...")
         channels_audio = audio.set_channels(target_channels)
         channels_audio.export(output_file, format="wav")
-        print(f"[INFO] {target_channels}-channel audio saved as: {output_file}")
         return output_file
     else:
-        print(f"[INFO] Audio is already {target_channels}-channel.")
         return input_file
 
-# Convert audio file format
 def convert_audio_format(input_file, target_format=".wav"):
-    print(f"[INFO] Converting {input_file} to {target_format} format...")
     file_name, file_extension = os.path.splitext(input_file)
     
     if file_extension.lower() not in AUDIO_FORMATS:
-        raise ValueError(f"[ERROR] Unsupported file format: {file_extension}.")
+        raise ValueError(f"Unsupported file format: {file_extension}.")
     
     audio = AudioSegment.from_file(input_file)
     output_file = f"{file_name}{target_format}"
     audio.export(output_file, format=target_format.strip('.'))
-    print(f"[INFO] File successfully converted to: {output_file}")
     return output_file
 
+def find_audio_peaks_using_intervals(audio_file, interval_sec=6, min_interval_sec=2):
+    y, sr = librosa.load(audio_file)
+    amplitude = np.abs(y)
+    time_frames = []
+    amplitudes = []
+    interval_samples = int(interval_sec * sr)
+    min_interval_samples = int(min_interval_sec * sr)
+    current_idx = 0
 
-def find_audio_peaks_using_spectrogram(audio_file, min_interval_sec=6, threshold=20):
-    print("[INFO] Analyzing audio to find peaks using the spectrogram...")
+    while current_idx < len(amplitude):
+        start_idx = current_idx
+        end_idx = min(current_idx + min_interval_samples, len(amplitude))
+        min_amplitude = np.min(amplitude[start_idx:end_idx])
+        min_idx = np.argmin(amplitude[start_idx:end_idx]) + start_idx
+        time_frames.append(librosa.samples_to_time(min_idx, sr=sr))
+        amplitudes.append(min_amplitude)
+        current_idx = min_idx + interval_samples
 
-    # Read the audio file
-    sample_rate, data = wavfile.read(audio_file)
-    
-    # If stereo, take only one channel
-    if len(data.shape) > 1:
-        data = data[:, 0]
-    
-    # Generate the spectrogram
-    frequencies, times, Sxx = spectrogram(data, sample_rate)
-    
-    # Normalize the spectrogram and apply thresholding
-    Sxx_log = 10 * np.log10(Sxx)
-    Sxx_log = np.where(Sxx_log < threshold, 0, Sxx_log)
-    
-    # Identify time frames where audio exceeds the threshold
-    is_significant = np.any(Sxx_log > 0, axis=0)
-    
-    # Find continuous segments of significant sound
-    significant_times = times[np.where(is_significant)] * 1000  # Convert to milliseconds
-    
-    # Determine start and end times for each peak interval
+    if time_frames:
+        time_frames[0] = 0.0
+        time_frames[-1] = librosa.samples_to_time(len(y), sr=sr)
+
     peaks = []
-    last_end_time = None
+    for i in range(len(time_frames) - 1):
+        start_time = time_frames[i] * 1000
+        end_time = time_frames[i + 1] * 1000
+        peaks.append((start_time, end_time))
 
-    for start_time in significant_times:
-        if last_end_time is None or (start_time - last_end_time) >= (min_interval_sec * 1000):
-            if last_end_time is not None:
-                peaks.append((last_end_time, start_time))
-            last_end_time = start_time
+    if len(time_frames) > 1:
+        peaks.append((time_frames[-2] * 1000, time_frames[-1] * 1000))
 
-    # Add the last interval to the end of the audio duration if it exists
-    if last_end_time is not None:
-        audio_duration = len(data) / sample_rate * 1000  # Convert to milliseconds
-        peaks.append((last_end_time, audio_duration))
+    if len(peaks) > 1 and peaks[-1] == peaks[-2]:
+        peaks.pop()
 
-    print(f"[INFO] Found {len(peaks)} peaks in the audio with a minimum interval of {min_interval_sec} seconds.")
-    
     return peaks
 
-
-
 def generate_gpt_3d_positions(peaks, system_prompt):
-    print("[INFO] Sending onset data to GPT for 3D position generation...")
-    
     gpt_positions = []
-    batch_size = 30  # Split requests into batches of 30 onsets
+    batch_size = 30
 
     for i in range(0, len(peaks), batch_size):
         batch_peaks = peaks[i:i+batch_size]
@@ -138,50 +117,39 @@ def generate_gpt_3d_positions(peaks, system_prompt):
 
         try:
             response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-            response.raise_for_status()  # Raise error for bad status codes
+            response.raise_for_status()
             result = response.json()
-
-            # Debug: Check the GPT response
-            print(f"[DEBUG] GPT Response Content: {result}")
 
             if 'choices' in result and len(result['choices']) > 0:
                 gpt_response = result['choices'][0]['message']['content']
                 
                 try:
-                    # Parse the GPT response
-                    batch_positions = json.loads(gpt_response)  # Expecting GPT to return JSON-like positions
+                    batch_positions = json.loads(gpt_response)
                     gpt_positions.extend(batch_positions)
                 except json.JSONDecodeError as e:
-                    print(f"[ERROR] Failed to decode GPT response as JSON: {e}")
-                    print(f"[DEBUG] GPT response was: {gpt_response}")
+                    print(f"Failed to decode GPT response as JSON: {e}")
                     return None
             else:
                 raise ValueError("Unexpected response format from GPT.")
         
         except requests.exceptions.RequestException as e:
-            print(f"[ERROR] API request failed: {e}")
+            print(f"API request failed: {e}")
             return None
 
     return gpt_positions
 
-
-
-# Use GPT-generated positions to process 3D audio
 def generate_location_data_gpt(peaks, system_prompt):
-    # Get positions from GPT
     gpt_positions = generate_gpt_3d_positions(peaks, system_prompt)
     
     if gpt_positions is None:
-        print("[ERROR] Failed to generate 3D positions with GPT.")
+        print("Failed to generate 3D positions with GPT.")
         return []
 
-    # Check if the number of positions matches the number of peaks
     if len(gpt_positions) < len(peaks):
-        print(f"[WARNING] GPT generated fewer positions ({len(gpt_positions)}) than peaks ({len(peaks)}). Filling the rest with default values.")
+        print(f"GPT generated fewer positions ({len(gpt_positions)}) than peaks ({len(peaks)}). Filling the rest with default values.")
     elif len(gpt_positions) > len(peaks):
-        print(f"[WARNING] GPT generated more positions ({len(gpt_positions)}) than peaks ({len(peaks)}). Trimming the excess positions.")
+        print(f"GPT generated more positions ({len(gpt_positions)}) than peaks ({len(peaks)}). Trimming the excess positions.")
 
-    # Convert GPT positions into a format usable by the audio processing system
     location_data = []
     for i in range(min(len(peaks), len(gpt_positions))):
         location_data.append({
@@ -192,27 +160,21 @@ def generate_location_data_gpt(peaks, system_prompt):
             "distance": gpt_positions[i]['distance']
         })
 
-    # If GPT returned fewer positions than peaks, fill the rest with default values
     for i in range(len(gpt_positions), len(peaks)):
         location_data.append({
             "start_time": peaks[i][0],
             "end_time": peaks[i][1],
-            "azimuth": 0,  # Default azimuth
-            "elevation": 0,  # Default elevation
-            "distance": 3  # Default distance (e.g., middle distance)
+            "azimuth": 0,
+            "elevation": 0,
+            "distance": 3
         })
 
-    print(f"[INFO] Successfully generated 3D positions for {len(location_data)} segments.")
     return location_data
 
-
-# Apply 3D effects to the audio
 def apply_3d_effects(input_wav_file, location_data):
-    print(f"[INFO] Applying 3D effects to {input_wav_file}...")
     data, sample_rate = sf.read(input_wav_file)
     
     if data.ndim == 1:
-        print("[INFO] Converting mono audio to stereo...")
         input_wav_file = convert_audio_channels(input_wav_file, "stereo_audio.wav")
         data, sample_rate = sf.read(input_wav_file)
 
@@ -220,11 +182,9 @@ def apply_3d_effects(input_wav_file, location_data):
     current_time = int(time.time())
     output_file = f"SFX_{current_time}_output.wav"
     sf.write(output_file, processed_data, sample_rate)
-    print(f"[INFO] 3D audio effects applied and saved to: {output_file}")
 
     return output_file
 
-# Process audio chunks using location data
 def process_audio_chunks(data, sample_rate, location_data):
     processed_data = []
     for i, interval in enumerate(location_data):
@@ -232,8 +192,6 @@ def process_audio_chunks(data, sample_rate, location_data):
         if not is_valid_chunk(start_sample, end_sample, data):
             continue
 
-        print(f"[DEBUG] Processing chunk {i + 1}/{len(location_data)}: Start sample {start_sample}, End sample {end_sample}")
-        
         chunk = data[start_sample:end_sample]
         next_azimuth = get_next_azimuth(i, location_data)
         processed_chunk = apply_3d_effects_to_chunk(
@@ -241,13 +199,11 @@ def process_audio_chunks(data, sample_rate, location_data):
         )
         processed_data.append(processed_chunk)
 
-    # Ensure smooth transition between chunks by panning
-    processed_data = pan_transitions(processed_data, sample_rate)
+    processed_data = pan_transitions(processed_data)
 
     return normalize_audio_volume(np.concatenate(processed_data, axis=0))
 
-# New transition function that just pans to the next location
-def pan_transitions(chunks, sample_rate):
+def pan_transitions(chunks):
     if not chunks:
         return np.array([])
 
@@ -255,17 +211,16 @@ def pan_transitions(chunks, sample_rate):
         current_chunk = chunks[i]
         next_chunk = chunks[i + 1]
 
-        # Calculate the azimuth transition for panning from current chunk to the position of the next chunk
-        azimuth_transition_to_next = np.linspace(0, 1, len(current_chunk))
+        if i % 2 == 0:
+            azimuth_transition_to_next = np.linspace(0, 1, len(current_chunk))
+        else:
+            azimuth_transition_to_next = np.linspace(1, 0, len(current_chunk))
         
-        # Apply panning to current chunk towards the position of the next chunk
-        current_chunk[:, 0] *= (1 - azimuth_transition_to_next)  # Pan left channel
-        current_chunk[:, 1] *= azimuth_transition_to_next  # Pan right channel
+        current_chunk[:, 0] *= (1 - azimuth_transition_to_next)
+        current_chunk[:, 1] *= azimuth_transition_to_next
 
     return chunks
 
-
-# Helper functions for 3D effect processing
 def get_sample_interval(interval, sample_rate):
     start_sample = int(interval["start_time"] * sample_rate / 1000)
     end_sample = int(interval["end_time"] * sample_rate / 1000)
@@ -273,7 +228,6 @@ def get_sample_interval(interval, sample_rate):
 
 def is_valid_chunk(start_sample, end_sample, data):
     if start_sample >= end_sample or start_sample >= len(data):
-        print(f"[WARNING] Skipping invalid chunk: start={start_sample}, end={end_sample}")
         return False
     return True
 
@@ -368,18 +322,19 @@ def get_file_from_mongo(file_id, output_path, collection):
             f.write(file_data)
         return output_path
     except NoFile:
-        print(f"[ERROR] No file found in collection {collection} with _id {file_id}")
+        print(f"No file found in collection {collection} with _id {file_id}")
         sys.exit(1)
 
-# Main function to orchestrate the process
 def main(input_file_id):
-    print("[INFO] Starting the process...")
     current_time = int(time.time())
     fileId = ObjectId(input_file_id)
     input_file = get_file_from_mongo(fileId, "sfx_input.mp3", 'input_SFX_files')
     output_file_name = f"SFX_{current_time}_output.wav"
     
     wav_file = convert_audio_format(input_file)
+    
+    audio = AudioSegment.from_file(wav_file)
+    
     system_prompt = """
 You are an expert in generating realistic 3D audio positions for sound effects. Given the onset times in milliseconds, generate 3D positions (azimuth, elevation, and distance) for each onset to create a natural and balanced 3D audio effect. The values should follow these guidelines:
 
@@ -410,35 +365,29 @@ Please provide the output strictly in the following JSON format, no extra text o
 
 """
     
-    audio = AudioSegment.from_file(wav_file)
-    total_duration = len(audio)
-    
-    peaks = find_audio_peaks_using_spectrogram(wav_file)
+    peaks = find_audio_peaks_using_intervals(wav_file)
     location_data = generate_location_data_gpt(peaks, system_prompt)
     output_wav_file = apply_3d_effects(wav_file, location_data)
+    
+    processed_audio = AudioSegment.from_file(output_wav_file)
     
     output_mp3_file = output_wav_file.replace(".wav", ".mp3")
     convert_audio_format(output_wav_file, target_format=".mp3")
     
-    processed_duration = len(AudioSegment.from_file(output_mp3_file)) / 1000
-    print(f"[INFO] Final processed duration: {processed_duration} seconds.")
-    print("[INFO] Process completed successfully!")
-
-    # Upload output files to MongoDB using GridFS
+    final_audio = AudioSegment.from_file(output_mp3_file)
+    processed_duration = len(final_audio) / 1000
+    
     with open(output_mp3_file, "rb") as f:
         output_data = f.read()
         GridFS(db, collection='output_SFX_files').put(output_data, filename=os.path.basename(output_mp3_file))
-        print(f"[INFO] Output file uploaded to MongoDB with filename: {os.path.basename(output_mp3_file)}")
 
-    # Clean up temporary files
     os.remove(output_wav_file)
-    os.remove(wav_file)  # Delete the intermediate WAV file
+    os.remove(wav_file)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("[ERROR] Please provide the input file ID as an argument.")
+        print("Please provide the input file ID as an argument.")
         sys.exit(1)
     
     input_file_id = sys.argv[1]
-    print(f"[INFO] Processing file with ID: {input_file_id}")
     main(input_file_id)
