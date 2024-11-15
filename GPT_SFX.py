@@ -24,8 +24,8 @@ ATTENUATION_DISTANCE_FACTOR = 4
 
 api_key = "Your_OPENAI_API_Key"
 
-username = quote_plus("sachingaur")
-password = quote_plus("Sachin@1234")
+username = quote_plus("Your_Username")
+password = quote_plus("Password")
 
 client = MongoClient(f"mongodb+srv://{username}:{password}@cluster0.9xtyu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&ssl=true")
 db = client['audio_database']
