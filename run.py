@@ -10,8 +10,8 @@ from gridfs.errors import NoFile  # Import the correct exception
 from bson import ObjectId
 
 # Configure MongoDB
-username = quote_plus("sachingaur")
-password = quote_plus("Sachin@1234")
+username = quote_plus("UserName")
+password = quote_plus("PassWord")
 client = MongoClient(f"mongodb+srv://{username}:{password}@cluster0.9xtyu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client['audio_database']
 
@@ -78,12 +78,9 @@ if __name__ == "__main__":
     print(f"[INFO] VO ID: {vo_id}")
     print(f"[INFO] BGM ID: {bgm_id}")
 
-    # Fetch files from MongoDB
-    # fileId1 = ObjectId(sfx_id)
-    # fileId2 = ObjectId(vo_id)
+
     fileId3 = ObjectId(bgm_id)
-    # sfx_file = get_file_from_mongo(fileId1, "sfx_input.mp3", 'input_SFX_files')
-    # vo_file = get_file_from_mongo(fileId2, "vo_input.mp3", 'input_VO_files')
+
     bgm_file = get_file_from_mongo(fileId3, "bgm_input.mp3", 'input_BGM_files')
 
     # Run processing script for SFX and wait for it to complete
