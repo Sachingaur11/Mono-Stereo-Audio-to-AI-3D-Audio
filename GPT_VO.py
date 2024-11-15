@@ -21,11 +21,11 @@ ATTENUATION_MAX = 0.7
 ATTENUATION_DISTANCE_FACTOR = 3
 
 # Your OpenAI API key
-api_key = "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"
+api_key = "Your_OPENAI_API_Key"
 
 # Encode the username and password
-username = quote_plus("sachingaur")
-password = quote_plus("Sachin@1234")
+username = quote_plus("Your_UserName")
+password = quote_plus("Password")
 
 # Use the encoded username and password in the connection string
 client = MongoClient(f"mongodb+srv://{username}:{password}@cluster0.9xtyu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
