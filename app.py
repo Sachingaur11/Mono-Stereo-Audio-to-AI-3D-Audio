@@ -10,8 +10,8 @@ import sys
 app = Flask(__name__)
 
 # Configure MongoDB
-username = quote_plus("sachingaur")
-password = quote_plus("Sachin@1234")
+username = quote_plus("UserName")
+password = quote_plus("PassWord")
 client = MongoClient(f"mongodb+srv://{username}:{password}@cluster0.9xtyu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = client['audio_database']
 
