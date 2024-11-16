@@ -87,7 +87,7 @@ def create_transcription_job(audio_file):
         "webhook": "https://example.com/webhook"
     }
     headers = {
-        "Authorization": "Bearer sk-81b0a5f4363242cfaf5017e7efc70bc0"
+        "Authorization": "Bearer Your_Spectropic_API_KEY"
     }
 
     try:
@@ -109,7 +109,7 @@ def create_transcription_job(audio_file):
 
 def check_job_status(job_id, system_prompt):
     url = f"https://api.spectropic.ai/v1/jobs/{job_id}"
-    headers = {"Authorization": "Bearer sk-81b0a5f4363242cfaf5017e7efc70bc0"}
+    headers = {"Authorization": "Bearer Your_Spectropic_API_KEY"}
 
     while True:
         try:
