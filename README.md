@@ -1,3 +1,4 @@
+
 # Stereo to 3D Audio conversion
 
 ## Description
@@ -14,7 +15,7 @@ The Stereo to 3D Audio Conversion project is designed to transform standard ster
 - **Web Interface**: Provides a user-friendly web interface for uploading audio files and downloading processed outputs.
 
 This project is ideal for developers and audio engineers looking to explore the potential of 3D audio in applications such as virtual reality, gaming, and immersive media.
-
+![Screenshot 2024-11-16 at 7 02 57 AM](https://github.com/user-attachments/assets/55f0aeb3-071f-4269-8799-3ca3beb92929)
 ## Prerequisites
 
 - Python 3.x
